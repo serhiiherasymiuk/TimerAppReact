@@ -1,20 +1,32 @@
 import { useState, useRef } from 'react';
+import { useForm } from 'react-hook-form';
+import './Timer.css';
 
 export function Timer() {
-  const [seconds, setSeconds] = useState(0);
+  const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const intervalRef = useRef(null);
 
-  const handleInputChange = (event) => {
-    setSeconds(parseInt(event.target.value));
+  const { register, handleSubmit } = useForm();
+
+  const onSubmit = (data) => {
+    const { hours, minutes, seconds } = data;
+    setTime(hours * 3600000 + minutes * 60000 + seconds * 1000);
   };
 
   const handleStartClick = () => {
-    if (seconds > 0 && !isRunning) {
+    if (time > 0 && !isRunning) {
       setIsRunning(true);
       intervalRef.current = setInterval(() => {
-        setSeconds((prevSeconds) => prevSeconds - 1);
-      }, 1000);
+        setTime((prevTime) => {
+          if (prevTime == 0) {
+            clearInterval(intervalRef.current);
+            setIsRunning(false);
+            return prevTime;
+          }
+          return prevTime - 10;
+        });
+      }, 10);
     }
   };
 
@@ -26,34 +38,42 @@ export function Timer() {
   const handleStopClick = () => {
     setIsRunning(false);
     clearInterval(intervalRef.current);
-    setSeconds(0);
+    setTime(0);
   };
 
   const formatTime = (time) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = time % 60;
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    const hours = Math.floor(time / 3600000);
+    const minutes = Math.floor((time % 3600000) / 60000);
+    const seconds = Math.floor((time % 60000) / 1000);
+    const milliseconds = (time % 1000) / 10;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}:${milliseconds.toString().padStart(2, '0')}`;
   };
 
   return (
-    <div>
+    <div className="Timer">
       <h1>Timer</h1>
-      <div>
-        <label htmlFor="seconds">Seconds:</label>
-        <input type="number" id="seconds" value={seconds} onChange={handleInputChange} />
-      </div>
-      <div>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div className='input-container'>
+          <input type="number" {...register('hours', { min: 0 })} placeholder="Hours" />
+          <p>:</p>
+          <input type="number" {...register('minutes', { min: 0, max: 59 })} placeholder="Minutes" />
+          <p>:</p>
+          <input type="number" {...register('seconds', { min: 0, max: 59 })} placeholder="Seconds" />
+        </div>
+        <button>Set Time</button>
+      </form>
+      <div className='buttons'>
         <button onClick={handleStartClick} disabled={isRunning}>
           Start
         </button>
         <button onClick={handlePauseClick} disabled={!isRunning}>
           Pause
         </button>
-        <button onClick={handleStopClick} disabled={!isRunning && seconds === 0}>
+        <button onClick={handleStopClick} disabled={!isRunning && time === 0}>
           Stop
         </button>
       </div>
-      <p>{formatTime(seconds)}</p>
+      <p>{formatTime(time)}</p>
     </div>
   );
 }
